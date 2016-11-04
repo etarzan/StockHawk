@@ -17,7 +17,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.InputType;
-import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -32,6 +31,7 @@ import com.melnykov.fab.FloatingActionButton;
 import com.sam_chordas.android.stockhawk.R;
 import com.sam_chordas.android.stockhawk.data.QuoteColumns;
 import com.sam_chordas.android.stockhawk.data.QuoteProvider;
+import com.sam_chordas.android.stockhawk.exception.SymbolNotFoundException;
 import com.sam_chordas.android.stockhawk.rest.QuoteCursorAdapter;
 import com.sam_chordas.android.stockhawk.rest.RecyclerViewItemClickListener;
 import com.sam_chordas.android.stockhawk.rest.Utils;
@@ -74,7 +74,7 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
         mServiceIntent = new Intent(this, StockIntentService.class);
         if (savedInstanceState == null) {
             // Run the initialize task service so that some stocks appear upon an empty database
-            mServiceIntent.putExtra(getResources().getString(R.string.string_tag), getResources().getString(R.string.string_init));
+            mServiceIntent.putExtra(getResources().getString(R.string.string_tag_exists), getResources().getString(R.string.string_init));
             if (isConnected) {
                 startService(mServiceIntent);
                 emptyView.setVisibility(View.GONE);
@@ -115,23 +115,32 @@ public class MyStocksActivity extends AppCompatActivity implements LoaderManager
                             .input(R.string.input_hint, R.string.input_prefill, new MaterialDialog.InputCallback() {
                                 @Override
                                 public void onInput(MaterialDialog dialog, CharSequence input) {
-                                    // On FAB click, receive user input. Make sure the stock doesn't already exist
-                                    // in the DB and proceed accordingly
-                                    Cursor c = getContentResolver().query(QuoteProvider.Quotes.CONTENT_URI,
-                                            new String[]{QuoteColumns.SYMBOL}, QuoteColumns.SYMBOL + "= ?",
-                                            new String[]{input.toString()}, null);
-                                    if (c.getCount() != 0) {
+                                    if (Utils.containsSplCharacters(input.toString())) {
                                         Toast toast =
-                                                Toast.makeText(MyStocksActivity.this, getResources().getString(R.string.string_tag),
+                                                Toast.makeText(MyStocksActivity.this, getResources().getString(R.string.string_contains_spl),
                                                         Toast.LENGTH_LONG);
-                                        toast.setGravity(Gravity.CENTER, Gravity.CENTER, 0);
                                         toast.show();
                                         return;
                                     } else {
-                                        // Add the stock to DB
-                                        mServiceIntent.putExtra(getResources().getString(R.string.string_tag), getResources().getString(R.string.string_add));
-                                        mServiceIntent.putExtra(getResources().getString(R.string.string_symbol), input.toString());
-                                        startService(mServiceIntent);
+
+                                        // On FAB click, receive user input. Make sure the stock doesn't already exist
+                                        // in the DB and proceed accordingly
+                                        Cursor c = getContentResolver().query(QuoteProvider.Quotes.CONTENT_URI,
+                                                new String[]{QuoteColumns.SYMBOL}, QuoteColumns.SYMBOL + "= ?",
+                                                new String[]{String.format("%S", input.toString())}, null);
+                                        if (c.getCount() != 0) {
+                                            Toast toast =
+                                                    Toast.makeText(MyStocksActivity.this, getResources().getString(R.string.string_tag_exists),
+                                                            Toast.LENGTH_LONG);
+                                            // toast.setGravity(Gravity.CENTER, Gravity.CENTER, 0);
+                                            toast.show();
+                                            return;
+                                        } else {
+                                            // Add the stock to DB
+                                            mServiceIntent.putExtra(getResources().getString(R.string.string_tag_exists), getResources().getString(R.string.string_add));
+                                            mServiceIntent.putExtra(getResources().getString(R.string.string_symbol), input.toString());
+                                            startService(mServiceIntent);
+                                        }
                                     }
                                 }
                             })
