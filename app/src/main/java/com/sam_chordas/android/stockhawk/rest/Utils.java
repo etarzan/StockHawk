@@ -8,6 +8,8 @@ import com.sam_chordas.android.stockhawk.exception.SymbolNotFoundException;
 
 import java.util.ArrayList;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -103,5 +105,15 @@ public class Utils {
             return true;
         else
             return false;
+    }
+    public static boolean containsSplCharacters(String input){
+        Pattern p = Pattern.compile("[^a-z0-9]", Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(input);
+        boolean b = m.find();
+        if(b)
+            return true;
+        else
+            return false;
+
     }
 }
